@@ -21,9 +21,9 @@
 
   <ItemGroup>
     <Folder Include="Data/" />
-    <Folder Include="Entity/" />
-    <Folder Include="Helper/" />
+    <Folder Include="Enums/" />
     <Folder Include="Service/Impl/" />
+    <Folder Include="Worker/" />
   </ItemGroup>
 
 </Project>

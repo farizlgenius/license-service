@@ -1,3 +1,5 @@
+using System.Net;
+using LicenseService.Model;
 using LicenseService.Service.Impl;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
@@ -9,9 +11,12 @@ namespace LicenseService.Controllers
     public class LicenseController(ILicenseService service) : ControllerBase
     {
         [HttpPost("generate/demo")]
-        public IActionResult GenerateDemoLicenseAsync()
+        public IActionResult GenerateDemoLicenseAsync([FromBody] string fingerPrint)
         {
-            return Ok(new { message = "Demo license generated" });
+            var payload = service.CreateLicenseDemoAsync(fingerPrint);
+            return Ok(
+                new BaseDto(HttpStatusCode.OK, payload, Guid.NewGuid(), "Demo license generation successful", DateTime.UtcNow)
+            );
         }
 
         [HttpPost("generate")]
