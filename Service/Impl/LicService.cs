@@ -10,11 +10,11 @@ using Microsoft.Extensions.Options;
 
 namespace LicenseService.Service.Impl;
 
-public class LicenseService : ILicenseService
+public class LicService : ILicenseService
 {
   private readonly AppConfigSetting _settings;
   private readonly AppDbContext _contex;
-  public LicenseService(IOptions<AppConfigSetting> options, AppDbContext contex)
+  public LicService(IOptions<AppConfigSetting> options, AppDbContext contex)
   {
     _settings = options.Value;
     _contex = contex;
@@ -31,7 +31,7 @@ public class LicenseService : ILicenseService
     if (keys == null) return null;
 
     //var privateKeyPem = File.ReadAllText("license_private.pem");
-    var aesKey = SHA256.HashData(Encoding.UTF8.GetBytes(_settings.Encryption.ProductSalt));
+    var aesKey = SHA256.HashData(Convert.FromBase64String(_settings.Encryption.ProductSalt));
 
     var payload = new LicensePayload(
       Guid.NewGuid(),
@@ -65,8 +65,7 @@ public class LicenseService : ILicenseService
     var signedBytes = iv.Concat(cipher).Concat(tag).ToArray();
 
     using var rsa = RSA.Create();
-    string pem = Encoding.UTF8.GetString(keys.private_key);
-    rsa.ImportFromPem(pem);
+    rsa.ImportPkcs8PrivateKey(Helper.CryptoHelper.Decrypt(keys.private_key, Convert.FromBase64String(_settings.Encryption.ProductSalt)), out _);
     var sig = rsa.SignData(signedBytes, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
 
     var license = new EncryptedLicense(

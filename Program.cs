@@ -1,5 +1,9 @@
 using LicenseService.Data;
+using LicenseService.Exceptions;
 using LicenseService.Model;
+using LicenseService.Service;
+using LicenseService.Service.Impl;
+using LicenseService.Worker;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 
@@ -18,11 +22,38 @@ builder.Services.Configure<AppConfigSetting>(
     builder.Configuration.GetSection("AppSettings")
     );
 
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen();
+// builder.Services.AddCors(options =>
+// {
+//     options.AddPolicy("AllowSpecificOrigins",
+//         builder =>
+//         {
+//             builder.WithOrigins("https://example.com", "https://www.example.com")
+//                    .AllowAnyHeader()
+//                    .AllowAnyMethod();
+//         });
+// });
 builder.Services.AddRouting(options =>
 {
     options.LowercaseUrls = true;
     options.LowercaseQueryStrings = true; // optional
 });
+
+builder.Host.UseSerilog((ctx, services, cfg) =>
+{
+    cfg.ReadFrom.Configuration(ctx.Configuration)
+       .ReadFrom.Services(services)
+       .Enrich.FromLogContext()
+       .WriteTo.Console();
+});
+
+builder.Services.AddHostedService<KeyRotationWorker>();
+builder.Services.AddScoped<ILicenseService, LicService>();
+builder.Services.AddScoped<IKeyRotateService, KeyRotateService>();
+builder.Services.AddTransient<ExceptionHandlingMiddleware>();
+
+builder.Services.AddControllers();
 
 var app = builder.Build();
 
@@ -32,6 +63,8 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
+
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
@@ -39,6 +72,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
+app.UseMiddleware<ExceptionHandlingMiddleware>();
 
 
 app.UseCors("AllowSpecificOrigins");
@@ -52,7 +86,3 @@ app.UseAuthorization();
 app.MapControllers();
 app.Run();
 
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}

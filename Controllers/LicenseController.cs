@@ -11,18 +11,18 @@ namespace LicenseService.Controllers
     public class LicenseController(ILicenseService service) : ControllerBase
     {
         [HttpPost("generate/demo")]
-        public IActionResult GenerateDemoLicenseAsync([FromBody] string fingerPrint)
+        public async Task<IActionResult> GenerateDemoLicenseAsync([FromBody] string fingerPrint)
         {
-            var payload = service.CreateLicenseDemoAsync(fingerPrint);
+            var payload = await service.CreateLicenseDemoAsync(fingerPrint);
             return Ok(
                 new BaseDto(HttpStatusCode.OK, payload, Guid.NewGuid(), "Demo license generation successful", DateTime.UtcNow)
             );
         }
 
         [HttpPost("generate")]
-        public IActionResult GenerateStandardLicenseAsync()
+        public Task<IActionResult> GenerateStandardLicenseAsync()
         {
-            return Ok(new { message = "Standard license generated" });
+            return Task.FromResult<IActionResult>(Ok(new { message = "Standard license generated" }));
         }
     }
 }

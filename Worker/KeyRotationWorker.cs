@@ -1,17 +1,25 @@
-using System;
 using LicenseService.Service;
 
 namespace LicenseService.Worker;
 
-public sealed class KeyRotationWorker(IKeyRotateService service) : BackgroundService
+public sealed class KeyRotationWorker : BackgroundService
 {
-  protected async override Task ExecuteAsync(CancellationToken stoppingToken)
+  private readonly IServiceScopeFactory _scopeFactory;
+
+  public KeyRotationWorker(IServiceScopeFactory scopeFactory)
+  {
+    _scopeFactory = scopeFactory;
+  }
+
+  protected override async Task ExecuteAsync(CancellationToken stoppingToken)
   {
     while (!stoppingToken.IsCancellationRequested)
     {
+      using var scope = _scopeFactory.CreateScope();
+      var service = scope.ServiceProvider.GetRequiredService<IKeyRotateService>();
+
       await service.CheckRotateNeededAsync();
 
-      // Check once per day
       await Task.Delay(TimeSpan.FromDays(1), stoppingToken);
     }
   }

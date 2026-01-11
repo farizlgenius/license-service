@@ -37,10 +37,12 @@ public sealed class KeyRotateService : IKeyRotateService
       // Generate new key
       var (pub, pri) = Helper.CryptoHelper.GenerateRsaKeyPair();
 
+      Console.WriteLine(_settings.Encryption.ProductSalt);
+
       var newKey = new Entity.KeyPair
       {
         key_uuid = Guid.NewGuid().ToString(),
-        private_key = Helper.CryptoHelper.Encrypt(pri, System.Text.Encoding.UTF8.GetBytes(_settings.Encryption.ProductSalt)),
+        private_key = Helper.CryptoHelper.Encrypt(pri, Convert.FromBase64String(_settings.Encryption.ProductSalt)),
         public_key = pub,
         created_date = DateTime.Now,
         expire_date = DateTime.Now.AddMonths(6),
