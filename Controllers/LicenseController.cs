@@ -10,12 +10,20 @@ namespace LicenseService.Controllers
     [ApiController]
     public class LicenseController(ILicenseService service) : ControllerBase
     {
+
+        [HttpPost("trusted")]
+        public async Task<IActionResult> TrustServerAsync([FromBody] TrustServerDto dto)
+        {
+            var res = await service.TrustServerAsync(dto);
+            return Ok(res);
+        }
+
         [HttpPost("generate/demo")]
-        public async Task<IActionResult> GenerateDemoLicenseAsync([FromBody] string fingerPrint)
+        public async Task<IActionResult> GenerateDemoLicenseAsync([FromBody] GenerateDemo fingerPrint)
         {
             var payload = await service.CreateLicenseDemoAsync(fingerPrint);
             return Ok(
-                new BaseDto(HttpStatusCode.OK, payload, Guid.NewGuid(), "Demo license generation successful", DateTime.UtcNow)
+                new BaseDto(HttpStatusCode.OK, payload, Guid.NewGuid(), payload is null ? "Demo license generation failed" : "Demo license generation successful", DateTime.UtcNow)
             );
         }
 

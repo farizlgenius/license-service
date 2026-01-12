@@ -4,13 +4,13 @@ namespace LicenseService.Model;
 
 public sealed class AppConfigSetting
 {
-  public DemoLicenseSetting DemoLicense { get; set; }
-  public EncryptionSetting Encryption { get; set; }
+  public required DemoLicenseSetting DemoLicense { get; set; }
+  public required EncryptionSetting Encryption { get; set; }
 }
 
 public sealed class EncryptionSetting
 {
-  public string ProductSalt { get; set; } = string.Empty;
+  public int KeyExpireInMonth { get; set; }
 }
 
 public sealed class DemoLicenseSetting

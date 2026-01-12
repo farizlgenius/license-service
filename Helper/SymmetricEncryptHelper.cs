@@ -3,7 +3,7 @@ using System.Security.Cryptography;
 
 namespace LicenseService.Helper;
 
-public static class CryptoHelper
+public static class SymmetricEncryptHelper
 {
   private const int IvSize = 12;   // 96-bit nonce (recommended for GCM)
   private const int TagSize = 16;  // 128-bit auth tag

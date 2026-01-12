@@ -49,8 +49,9 @@ builder.Host.UseSerilog((ctx, services, cfg) =>
 });
 
 builder.Services.AddHostedService<KeyRotationWorker>();
-builder.Services.AddScoped<ILicenseService, LicService>();
+builder.Services.AddScoped<ILicenseService, LicensingService>();
 builder.Services.AddScoped<IKeyRotateService, KeyRotateService>();
+builder.Services.AddScoped<IKeyService, KeyService>();
 builder.Services.AddTransient<ExceptionHandlingMiddleware>();
 
 builder.Services.AddControllers();

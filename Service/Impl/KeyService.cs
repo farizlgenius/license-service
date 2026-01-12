@@ -10,23 +10,21 @@ namespace LicenseService.Service.Impl;
 public sealed class KeyService(AppDbContext context, IOptions<AppConfigSetting> options) : IKeyService
 {
   private readonly AppConfigSetting _settings = options.Value;
-  public async Task<KeyPair> GenerateKey()
+  public async Task GenerateKey()
   {
-    var (pub, pri) = Helper.CryptoHelper.GenerateRsaKeyPair();
+    var (publicKey, privateKey) = Helper.EcdhCryptoHelper.GenerateEcdhKeyPair();
 
-    var newKey = new Entity.KeyPair
+    var newKey = new Entity.ECDHKeyPair
     {
-      key_uuid = Guid.NewGuid().ToString(),
-      private_key = Helper.CryptoHelper.Encrypt(pri, System.Text.Encoding.UTF8.GetBytes(_settings.Encryption.ProductSalt)),
-      public_key = pub,
-      created_date = DateTime.Now,
-      expire_date = DateTime.Now.AddMonths(6),
+      key_uuid = Guid.NewGuid(),
+      public_key = publicKey,
+      secret_key = privateKey,
+      created_date = DateTime.UtcNow,
+      expire_date = DateTime.UtcNow.AddMonths(_settings.Encryption.KeyExpireInMonth),
       is_revoked = false
     };
 
-    await context.Keys.AddAsync(newKey);
+    await context.KeyPairs.AddAsync(newKey);
     await context.SaveChangesAsync();
-
-    return newKey;
   }
 }

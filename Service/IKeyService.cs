@@ -5,5 +5,5 @@ namespace LicenseService.Service;
 
 public interface IKeyService
 {
-  Task<KeyPair> GenerateKey();
+  Task GenerateKey();
 }

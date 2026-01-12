@@ -1,57 +1,75 @@
 using System;
 using LicenseService.Data;
+using LicenseService.Helper;
 using LicenseService.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
 namespace LicenseService.Service.Impl;
 
-public sealed class KeyRotateService : IKeyRotateService
+public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSetting> options) : IKeyRotateService
 {
-  private readonly AppDbContext _context;
-  private readonly AppConfigSetting _settings;
-  public KeyRotateService(AppDbContext context, IOptions<AppConfigSetting> options)
-  {
-    _context = context;
-    _settings = options.Value;
-  }
+  private readonly AppConfigSetting _settings = options.Value;
+
   public async Task CheckRotateNeededAsync()
   {
-    var key = await _context.Keys
+    var key = await context.KeyPairs
       .OrderByDescending(k => k.created_date)
       .Where(x => !x.is_revoked)
       .FirstOrDefaultAsync();
 
-    if (key == null || key.expire_date <= DateTime.Now)
+    if(key == null)
     {
       // Rotate key
       Console.WriteLine("Rotating keys...");
 
-      // Revoke old key
-      if (key != null)
-      {
-        key.is_revoked = true;
-        _context.Keys.Update(key);
-      }
-
       // Generate new key
-      var (pub, pri) = Helper.CryptoHelper.GenerateRsaKeyPair();
+      var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
 
-      Console.WriteLine(_settings.Encryption.ProductSalt);
-
-      var newKey = new Entity.KeyPair
+      var newKey = new Entity.ECDHKeyPair
       {
-        key_uuid = Guid.NewGuid().ToString(),
-        private_key = Helper.CryptoHelper.Encrypt(pri, Convert.FromBase64String(_settings.Encryption.ProductSalt)),
-        public_key = pub,
-        created_date = DateTime.Now,
-        expire_date = DateTime.Now.AddMonths(6),
-        is_revoked = false
+        key_uuid = Guid.NewGuid(),
+        public_key = publicKey,
+        secret_key = privateKey,
+        created_date = DateTime.UtcNow,
+        expire_date = DateTime.UtcNow.AddMonths(_settings.Encryption.KeyExpireInMonth),
+        is_revoked = false,
       };
 
-      await _context.Keys.AddAsync(newKey);
+      await context.KeyPairs.AddAsync(newKey);
 
-      await _context.SaveChangesAsync();
+      await context.SaveChangesAsync();
+
+      Console.WriteLine("Key rotation completed.");
+      return;
+
+    }
+
+    if (key.expire_date.ToLocalTime() <= DateTime.Now)
+    {
+      // Rotate key
+      Console.WriteLine("Rotating keys...");
+
+      key.is_revoked = true;
+      context.KeyPairs.Update(key);
+
+      // Generate new key
+      var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
+
+
+      var newKey = new Entity.ECDHKeyPair
+      {
+        key_uuid = Guid.NewGuid(),
+        public_key = publicKey,
+        secret_key = privateKey,
+        created_date = DateTime.UtcNow,
+        expire_date = DateTime.UtcNow.AddMonths(_settings.Encryption.KeyExpireInMonth),
+        is_revoked = false,
+      };
+
+      await context.KeyPairs.AddAsync(newKey);
+
+      await context.SaveChangesAsync();
 
       Console.WriteLine("Key rotation completed.");
     }
