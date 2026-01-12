@@ -21,17 +21,20 @@ public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext c
     throw new NotImplementedException();
   }
 
-  public async Task<bool> TrustServerAsync(TrustServerDto dto)
+  public async Task<string> TrustServerAsync(TrustServerDto dto)
   {
     // Step 1 : Generate ECDH key pair
     // var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
+
+    if (string.IsNullOrEmpty(dto.peerPublicKey) || string.IsNullOrEmpty(dto.machineId))
+      return null;
 
     // Step 1 : Get keys pair from DB
     var key = await context.KeyPairs
     .AsNoTracking()
     .FirstOrDefaultAsync(k => k.is_revoked == false);
 
-    if(key == null) return false;
+    if (key == null) return null;
 
     // Step 2 : Derive shared secret
     var serverPublicKeyBytes = Convert.FromBase64String(dto.peerPublicKey);
@@ -51,7 +54,7 @@ public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext c
     await context.Secrets.AddAsync(secret);
     await context.SaveChangesAsync();
 
-    return true;
+    return Convert.ToBase64String(key.public_key);
   }
 
   public async Task<EncryptedLicense> CreateLicenseDemoAsync(GenerateDemo demo)

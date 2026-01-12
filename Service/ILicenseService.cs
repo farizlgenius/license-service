@@ -7,5 +7,5 @@ public interface ILicenseService
 {
   Task<EncryptedLicense> CreateLicenseDemoAsync(GenerateDemo fingerPrint);
   Task<EncryptedLicense> CreateLicenseAsync(LicensePayload payload);
-  Task<bool> TrustServerAsync(TrustServerDto dto);
+  Task<string> TrustServerAsync(TrustServerDto dto);
 }

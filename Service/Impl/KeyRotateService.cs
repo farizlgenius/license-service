@@ -1,5 +1,6 @@
 using System;
 using LicenseService.Data;
+using LicenseService.Entity;
 using LicenseService.Helper;
 using LicenseService.Model;
 using Microsoft.EntityFrameworkCore;
@@ -18,7 +19,7 @@ public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSet
       .Where(x => !x.is_revoked)
       .FirstOrDefaultAsync();
 
-    if(key == null)
+    if (key == null)
     {
       // Rotate key
       Console.WriteLine("Rotating keys...");
@@ -26,7 +27,7 @@ public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSet
       // Generate new key
       var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
 
-      var newKey = new Entity.ECDHKeyPair
+      var newKey = new ECDHKeyPair
       {
         key_uuid = Guid.NewGuid(),
         public_key = publicKey,
