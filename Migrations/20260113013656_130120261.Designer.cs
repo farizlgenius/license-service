@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LicenseService.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260112092538_120120261")]
-    partial class _120120261
+    [Migration("20260113013656_130120261")]
+    partial class _130120261
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -64,7 +64,7 @@ namespace LicenseService.Migrations
 
                     b.HasIndex("key_uuid");
 
-                    b.ToTable("Secrets");
+                    b.ToTable("secret");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.ECDHKeyPair", b =>
@@ -97,7 +97,7 @@ namespace LicenseService.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("KeyPairs");
+                    b.ToTable("key_pair");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.License", b =>
@@ -143,7 +143,7 @@ namespace LicenseService.Migrations
 
                     b.HasIndex("secret_id");
 
-                    b.ToTable("Licenses");
+                    b.ToTable("license");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.DeriveSecretAudit", b =>

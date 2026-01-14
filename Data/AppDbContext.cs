@@ -8,26 +8,17 @@ namespace LicenseService.Data;
 
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
-  public DbSet<Entity.DeriveSecretAudit> Secrets { get; set; }
-  public DbSet<Entity.License> Licenses { get; set; }
-  public DbSet<Entity.ECDHKeyPair> KeyPairs { get; set; }
+  public DbSet<Entity.SignKeyAudit> sign_key { get; set; }
+  public DbSet<Entity.License> license { get; set; }
 
   protected override void OnModelCreating(ModelBuilder modelBuilder)
   {
-    modelBuilder.Entity<Entity.DeriveSecretAudit>()
-        .Property(e => e.public_key)
+    modelBuilder.Entity<Entity.SignKeyAudit>()
+        .Property(e => e.sign_pub)
         .HasColumnType("bytea");
 
-    modelBuilder.Entity<Entity.DeriveSecretAudit>()
-        .Property(e => e.shared_secret)
-        .HasColumnType("bytea");
-
-    modelBuilder.Entity<Entity.ECDHKeyPair>()
-        .Property(e => e.public_key)
-        .HasColumnType("bytea");
-
-    modelBuilder.Entity<Entity.ECDHKeyPair>()
-        .Property(e => e.secret_key)
+    modelBuilder.Entity<Entity.SignKeyAudit>()
+        .Property(e => e.sign_priv)
         .HasColumnType("bytea");
 
     modelBuilder.Entity<Entity.License>()
@@ -58,16 +49,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     // }
 
-    modelBuilder.Entity<ECDHKeyPair>()
-        .HasMany(k => k.secrets)
-        .WithOne(s => s.key_pair)
-        .HasForeignKey(s => s.key_uuid)
-        .HasPrincipalKey(k => k.key_uuid);
-
-    modelBuilder.Entity<DeriveSecretAudit>()
+    modelBuilder.Entity<SignKeyAudit>()
         .HasMany(k => k.licenses)
-        .WithOne(l => l.secret_key)
-        .HasForeignKey(l => l.secret_id)
-        .HasPrincipalKey(s => s.id);
+        .WithOne(s => s.sign_key)
+        .HasForeignKey(s => s.sign_key_uuid)
+        .HasPrincipalKey(k => k.sign_key_uuid);
+
   }
 }

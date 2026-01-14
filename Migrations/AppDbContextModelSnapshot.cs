@@ -61,7 +61,7 @@ namespace LicenseService.Migrations
 
                     b.HasIndex("key_uuid");
 
-                    b.ToTable("Secrets");
+                    b.ToTable("secret");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.ECDHKeyPair", b =>
@@ -94,7 +94,7 @@ namespace LicenseService.Migrations
 
                     b.HasKey("id");
 
-                    b.ToTable("KeyPairs");
+                    b.ToTable("key_pair");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.License", b =>
@@ -140,7 +140,7 @@ namespace LicenseService.Migrations
 
                     b.HasIndex("secret_id");
 
-                    b.ToTable("Licenses");
+                    b.ToTable("license");
                 });
 
             modelBuilder.Entity("LicenseService.Entity.DeriveSecretAudit", b =>

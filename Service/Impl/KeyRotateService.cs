@@ -14,7 +14,7 @@ public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSet
 
   public async Task CheckRotateNeededAsync()
   {
-    var key = await context.KeyPairs
+    var key = await context.sign_key
       .OrderByDescending(k => k.created_date)
       .Where(x => !x.is_revoked)
       .FirstOrDefaultAsync();
@@ -25,20 +25,18 @@ public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSet
       Console.WriteLine("Rotating keys...");
 
       // Generate new key
-      var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
-
-      var newKey = new ECDHKeyPair
+      var signer = EncryptHelper.CreateSigner();
+      var en = new SignKeyAudit
       {
-        key_uuid = Guid.NewGuid(),
-        public_key = publicKey,
-        secret_key = privateKey,
+        sign_key_uuid = Guid.NewGuid(),
+        sign_pub = signer.ExportSubjectPublicKeyInfo(),
+        sign_priv = signer.ExportPkcs8PrivateKey(),
         created_date = DateTime.UtcNow,
-        expire_date = DateTime.UtcNow.AddMonths(_settings.Encryption.KeyExpireInMonth),
-        is_revoked = false,
+        expire_date = DateTime.UtcNow.AddYears(1),
+        is_revoked = false
       };
 
-      await context.KeyPairs.AddAsync(newKey);
-
+      await context.sign_key.AddAsync(en);
       await context.SaveChangesAsync();
 
       Console.WriteLine("Key rotation completed.");
@@ -46,30 +44,26 @@ public sealed class KeyRotateService(AppDbContext context, IOptions<AppConfigSet
 
     }
 
-    if (key.expire_date.ToLocalTime() <= DateTime.Now)
+    if (key.expire_date <= DateTime.UtcNow)
     {
       // Rotate key
       Console.WriteLine("Rotating keys...");
 
       key.is_revoked = true;
-      context.KeyPairs.Update(key);
+      context.sign_key.Update(key);
 
-      // Generate new key
-      var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
-
-
-      var newKey = new Entity.ECDHKeyPair
+      var signer = EncryptHelper.CreateSigner();
+      var en = new SignKeyAudit
       {
-        key_uuid = Guid.NewGuid(),
-        public_key = publicKey,
-        secret_key = privateKey,
+        sign_key_uuid = Guid.NewGuid(),
+        sign_pub = signer.ExportSubjectPublicKeyInfo(),
+        sign_priv = signer.ExportPkcs8PrivateKey(),
         created_date = DateTime.UtcNow,
-        expire_date = DateTime.UtcNow.AddMonths(_settings.Encryption.KeyExpireInMonth),
-        is_revoked = false,
+        expire_date = DateTime.UtcNow.AddYears(1),
+        is_revoked = false
       };
 
-      await context.KeyPairs.AddAsync(newKey);
-
+      await context.sign_key.AddAsync(en);
       await context.SaveChangesAsync();
 
       Console.WriteLine("Key rotation completed.");

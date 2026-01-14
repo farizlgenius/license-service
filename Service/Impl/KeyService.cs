@@ -24,7 +24,7 @@ public sealed class KeyService(AppDbContext context, IOptions<AppConfigSetting> 
       is_revoked = false
     };
 
-    await context.KeyPairs.AddAsync(newKey);
+    await context.key_pair.AddAsync(newKey);
     await context.SaveChangesAsync();
   }
 }

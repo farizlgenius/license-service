@@ -7,13 +7,13 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LicenseService.Migrations
 {
     /// <inheritdoc />
-    public partial class _120120261 : Migration
+    public partial class _130120261 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
-                name: "KeyPairs",
+                name: "key_pair",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
@@ -27,12 +27,12 @@ namespace LicenseService.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_KeyPairs", x => x.id);
-                    table.UniqueConstraint("AK_KeyPairs_key_uuid", x => x.key_uuid);
+                    table.PrimaryKey("PK_key_pair", x => x.id);
+                    table.UniqueConstraint("AK_key_pair_key_uuid", x => x.key_uuid);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Secrets",
+                name: "secret",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
@@ -48,17 +48,17 @@ namespace LicenseService.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Secrets", x => x.id);
+                    table.PrimaryKey("PK_secret", x => x.id);
                     table.ForeignKey(
-                        name: "FK_Secrets_KeyPairs_key_uuid",
+                        name: "FK_secret_key_pair_key_uuid",
                         column: x => x.key_uuid,
-                        principalTable: "KeyPairs",
+                        principalTable: "key_pair",
                         principalColumn: "key_uuid",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateTable(
-                name: "Licenses",
+                name: "license",
                 columns: table => new
                 {
                     id = table.Column<int>(type: "integer", nullable: false)
@@ -75,23 +75,23 @@ namespace LicenseService.Migrations
                 },
                 constraints: table =>
                 {
-                    table.PrimaryKey("PK_Licenses", x => x.id);
+                    table.PrimaryKey("PK_license", x => x.id);
                     table.ForeignKey(
-                        name: "FK_Licenses_Secrets_secret_id",
+                        name: "FK_license_secret_secret_id",
                         column: x => x.secret_id,
-                        principalTable: "Secrets",
+                        principalTable: "secret",
                         principalColumn: "id",
                         onDelete: ReferentialAction.Cascade);
                 });
 
             migrationBuilder.CreateIndex(
-                name: "IX_Licenses_secret_id",
-                table: "Licenses",
+                name: "IX_license_secret_id",
+                table: "license",
                 column: "secret_id");
 
             migrationBuilder.CreateIndex(
-                name: "IX_Secrets_key_uuid",
-                table: "Secrets",
+                name: "IX_secret_key_uuid",
+                table: "secret",
                 column: "key_uuid");
         }
 
@@ -99,13 +99,13 @@ namespace LicenseService.Migrations
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropTable(
-                name: "Licenses");
+                name: "license");
 
             migrationBuilder.DropTable(
-                name: "Secrets");
+                name: "secret");
 
             migrationBuilder.DropTable(
-                name: "KeyPairs");
+                name: "key_pair");
         }
     }
 }

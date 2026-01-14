@@ -1,4 +1,6 @@
 using LicenseService.Data;
+using LicenseService.Entity;
+using LicenseService.Helper;
 using LicenseService.Service;
 using Microsoft.EntityFrameworkCore;
 
@@ -29,11 +31,23 @@ public class StartupTask : IHostedService
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     var keyRotateService = scope.ServiceProvider.GetRequiredService<IKeyService>();
 
-    var hasKey = await context.Secrets.AnyAsync(x => !x.is_revoked, cancellationToken);
+    var hasKey = await context.sign_key.AnyAsync(x => !x.is_revoked, cancellationToken);
 
     if (!hasKey)
     {
-      await keyRotateService.GenerateKey();
+      var signer = EncryptHelper.CreateSigner();
+      var en = new SignKeyAudit
+      {
+        sign_key_uuid = Guid.NewGuid(),
+        sign_pub = signer.ExportSubjectPublicKeyInfo(),
+        sign_priv = signer.ExportPkcs8PrivateKey(),
+        created_date = DateTime.UtcNow,
+        expire_date = DateTime.UtcNow.AddYears(1),
+        is_revoked = false
+      };
+
+      await context.sign_key.AddAsync(en, cancellationToken);
+      await context.SaveChangesAsync(cancellationToken);
     }
   }
 }
