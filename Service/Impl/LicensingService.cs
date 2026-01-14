@@ -21,42 +21,6 @@ public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext c
     throw new NotImplementedException();
   }
 
-  public async Task<string> TrustServerAsync(TrustServerDto dto)
-  {
-    // Step 1 : Generate ECDH key pair
-    // var (publicKey, privateKey) = EcdhCryptoHelper.GenerateEcdhKeyPair();
-
-    if (string.IsNullOrEmpty(dto.peerPublicKey) || string.IsNullOrEmpty(dto.machineId))
-      return null;
-
-    // Step 1 : Get keys pair from DB
-    var key = await context.key_pair
-    .AsNoTracking()
-    .FirstOrDefaultAsync(k => k.is_revoked == false);
-
-    if (key == null) return null;
-
-    // Step 2 : Derive shared secret
-    var serverPublicKeyBytes = Convert.FromBase64String(dto.peerPublicKey);
-    var sharedSecret = EcdhCryptoHelper.DeriveSharedSecret(key.secret_key, serverPublicKeyBytes);
-
-    // Step 3 : Store the public key and shared secret in the database
-    var secret = new SignKeyAudit
-    {
-      key_uuid = key.key_uuid,
-      machine_id = dto.machineId,
-      public_key = key.public_key,
-      shared_secret = sharedSecret,
-      created_date = DateTime.UtcNow,
-      expire_date = DateTime.UtcNow.AddDays(_settings.Encryption.KeyExpireInMonth),
-      is_revoked = false,
-    };
-    await context.secret.AddAsync(secret);
-    await context.SaveChangesAsync();
-
-    return Convert.ToBase64String(key.public_key);
-  }
-
   public async Task<EncryptedLicense> CreateLicenseDemoAsync(GenerateDemo demo)
   {
     var secrets = await context.secret.AsNoTracking().FirstOrDefaultAsync(x => x.is_revoked == false && x.machine_id == demo.machineId);

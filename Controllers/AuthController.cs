@@ -24,9 +24,18 @@ namespace LicenseService.Controllers
         }
 
         [HttpPost("verify")]
-        public async Task<IActionResult> VerifyAsync()
+        public async Task<IActionResult> VerifyAsync([FromBody] VerifyRequest request)
         {
-            return Ok();
+            var res = await service.VerifyAsync(request);
+            return Ok(
+                new BaseDto(
+                    HttpStatusCode.OK,
+                    res,
+                    Guid.NewGuid(),
+                    "Verification completed",
+                    DateTime.UtcNow.ToLocalTime()
+                )
+            );
         }
     }
 }

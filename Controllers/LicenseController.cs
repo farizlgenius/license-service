@@ -11,14 +11,6 @@ namespace LicenseService.Controllers
     public class LicenseController(ILicenseService service) : ControllerBase
     {
 
-        [HttpPost("trusted")]
-        public async Task<IActionResult> TrustServerAsync([FromBody] TrustServerDto dto)
-        {
-            var res = await service.TrustServerAsync(dto);
-            return Ok(
-                new BaseDto(HttpStatusCode.OK, res, Guid.NewGuid(), string.IsNullOrEmpty(res) ? "Server trusted successfully" : "Failed to trust server", DateTime.UtcNow)
-            );
-        }
 
         [HttpPost("generate/demo")]
         public async Task<IActionResult> GenerateDemoLicenseAsync([FromBody] GenerateDemo fingerPrint)
