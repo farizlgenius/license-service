@@ -6,6 +6,7 @@ using LicenseService.Service.Impl;
 using LicenseService.Worker;
 using Microsoft.EntityFrameworkCore;
 using Serilog;
+using StackExchange.Redis;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +22,19 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.Configure<AppConfigSetting>(
     builder.Configuration.GetSection("AppSettings")
     );
+
+// Register redis 
+builder.Services.AddSingleton<IConnectionMultiplexer>(sp =>
+{
+    var configuration = builder.Configuration.GetSection("Redis")["ConnectionString"] ?? "localhost:6379";
+    return ConnectionMultiplexer.Connect(configuration);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var mux = sp.GetRequiredService<IConnectionMultiplexer>();
+    return mux.GetDatabase();
+});
 
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -52,6 +66,7 @@ builder.Services.AddHostedService<KeyRotationWorker>();
 builder.Services.AddScoped<ILicenseService, LicensingService>();
 builder.Services.AddScoped<IKeyRotateService, KeyRotateService>();
 builder.Services.AddScoped<IKeyService, KeyService>();
+builder.Services.AddScoped<IRedisService, RedisService>();
 builder.Services.AddTransient<ExceptionHandlingMiddleware>();
 
 builder.Services.AddControllers();
