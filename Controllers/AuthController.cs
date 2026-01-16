@@ -14,28 +14,8 @@ namespace LicenseService.Controllers
         public async Task<IActionResult> ExchangeAsync([FromBody] ExchangeRequest request)
         {
             var res = await service.ExchangeAsync(request);
-            return Ok(new BaseDto(
-                HttpStatusCode.OK,
-                res,
-                Guid.NewGuid(),
-                "Exchange successful",
-                DateTime.UtcNow.ToLocalTime()
-            ));
+            return Ok(res);
         }
 
-        [HttpPost("verify")]
-        public async Task<IActionResult> VerifyAsync([FromBody] VerifyRequest request)
-        {
-            var res = await service.VerifyAsync(request);
-            return Ok(
-                new BaseDto(
-                    HttpStatusCode.OK,
-                    res,
-                    Guid.NewGuid(),
-                    "Verification completed",
-                    DateTime.UtcNow.ToLocalTime()
-                )
-            );
-        }
     }
 }

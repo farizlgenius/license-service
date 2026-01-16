@@ -4,6 +4,7 @@ namespace LicenseService.Model;
 
 public sealed class AppConfigSetting
 {
+  public required string Secret {get; set;}
   public required DemoLicenseSetting DemoLicense { get; set; }
   public required EncryptionSetting Encryption { get; set; }
 }

@@ -3,7 +3,8 @@ using System;
 namespace LicenseService.Model;
 
 public record EncryptedLicense(
-    Guid KeyUuid,
-    string Packed,
-    string Sig
+    string SessionId,
+    string Payload,
+    string Signature,
+    string ServerSingPublic
 );

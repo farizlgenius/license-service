@@ -1,5 +1,6 @@
 using System;
 using System.Security.Cryptography;
+using System.Text;
 
 namespace LicenseService.Helper;
 
@@ -55,6 +56,18 @@ public static class EncryptHelper
             return ecdsa;
       }
 
+      /// <summary>
+      /// Imports the ECDH private key.
+      /// </summary>
+      /// <param name="privateKey"></param>
+      /// <returns></returns>
+      public static ECDiffieHellman LoadDhPrivateKey(byte[] privateKey)
+      {
+            var dh = ECDiffieHellman.Create(ECCurve.NamedCurves.nistP256);
+            dh.ImportPkcs8PrivateKey(privateKey, out _);
+            return dh;
+      }
+
 
       /// <summary>
       /// Derives the shared secret key using ECDH key exchange.
@@ -84,14 +97,14 @@ public static class EncryptHelper
       /// Verifies the data signature using ECDSA.
       /// </summary>
       /// <param name="data">The data to verify.</param>
-      /// <param name="sign">The signature bytes.</param>
-      /// <param name="pub">The public key bytes.</param>
+      /// <param name="signature">The signature bytes.</param>
+      /// <param name="pubickey">The public key bytes.</param>
       /// <returns>True if the signature is valid, false otherwise.</returns>
-      public static bool VerifyData(byte[] data, byte[] sign,byte[] pub)
+      public static bool VerifyData(byte[] data, byte[] signature,byte[] pubickey)
       {
             using var ecdsa = ECDsa.Create(ECCurve.NamedCurves.nistP256);
-            ecdsa.ImportSubjectPublicKeyInfo(pub,out _);
-            return ecdsa.VerifyData(data, sign, HashAlgorithmName.SHA256);
+            ecdsa.ImportSubjectPublicKeyInfo(pubickey,out _);
+            return ecdsa.VerifyData(data, signature, HashAlgorithmName.SHA256);
       }
 
       /// <summary>
@@ -130,6 +143,41 @@ public static class EncryptHelper
             aes.Decrypt(iv, cipher, tag, plain);
 
             return plain;
+      }
+
+      /// <summary>
+      /// Derives AES key from shared secret using HKDF.
+      /// </summary>
+      /// <param name="sharedSecret"></param>
+      /// <returns></returns>
+      public static byte[] DeriveAesKey(byte[] sharedSecret,string info)
+      {
+            return HKDF.DeriveKey(
+                HashAlgorithmName.SHA256,
+                sharedSecret,
+                32,
+                salt: null,
+                info: Encoding.UTF8.GetBytes(info)
+            );
+      }
+
+      /// <summary>
+      /// Builds the payload by combining license and signature.
+      /// </summary>
+      /// <param name="license"></param>
+      /// <param name="signature"></param>
+      /// <returns></returns>
+      public static byte[] BuildPayload(byte[] license, byte[] signature)
+      {
+            using var ms = new MemoryStream();
+            using var bw = new BinaryWriter(ms);
+
+            bw.Write(license.Length);
+            bw.Write(license);
+            bw.Write(signature.Length);
+            bw.Write(signature);
+
+            return ms.ToArray();
       }
 
 

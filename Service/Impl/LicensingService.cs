@@ -8,33 +8,46 @@ using LicenseService.Helper;
 using LicenseService.Model;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using StackExchange.Redis;
 
 namespace LicenseService.Service.Impl;
 
-public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext context) : ILicenseService
+public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext context, IDatabase redis) : ILicenseService
 {
-  private readonly ECDsa _signer = ECDsa.Create(ECCurve.NamedCurves.nistP256);
   private readonly AppConfigSetting _settings = options.Value;
+  private readonly JsonSerializerOptions jopts = new()
+  {
+    PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+  };
 
   public Task<EncryptedLicense> CreateLicenseAsync(LicensePayload payload)
   {
     throw new NotImplementedException();
   }
 
-  public async Task<EncryptedLicense> CreateLicenseDemoAsync(GenerateDemo demo)
+  public async Task<BaseDto<EncryptedLicense>> CreateLicenseDemoAsync(GenerateDemo request)
   {
-    var secrets = await context.secret.AsNoTracking().FirstOrDefaultAsync(x => x.is_revoked == false && x.machine_id == demo.machineId);
+    // Step 1 : Check and get DH Key from redis or database
+    var authSession = await redis.StringGetAsync(request.sessionId);
+    if (authSession.IsNullOrEmpty) return new BaseDto<EncryptedLicense>(System.Net.HttpStatusCode.Unauthorized, null, Guid.NewGuid(), "Invalid session", DateTime.UtcNow.ToLocalTime());
 
-    if (secrets == null) return null;
+    var authJson = JsonSerializer.Deserialize<AuthSession>(authSession.ToString(), jopts);
 
-    var isAvailable = await context.license.AsNoTracking().AnyAsync(x => x.machine_id.Equals(demo.machineId));
+    if(authJson is null) return new BaseDto<EncryptedLicense>(System.Net.HttpStatusCode.Unauthorized, null, Guid.NewGuid(), "Invalid session data", DateTime.UtcNow.ToLocalTime());
 
-    if (isAvailable) return null;
+    if(authJson.expiresAt < DateTime.UtcNow) return new BaseDto<EncryptedLicense>(System.Net.HttpStatusCode.Unauthorized, null, Guid.NewGuid(), "Session expired", DateTime.UtcNow.ToLocalTime());
+
+    // Step 2 : Checking demo license availability
+    var isAvailable = await context.license.AsNoTracking().AnyAsync(x => x.machine_id.Equals(request.machineId));
+
+    if (isAvailable) return new BaseDto<EncryptedLicense>(System.Net.HttpStatusCode.BadRequest, null, Guid.NewGuid(), "Demo license already exists", DateTime.UtcNow.ToLocalTime());
+
+    // Step 3 : Get demo license details from settings
 
     var payload = new LicensePayload(
       Guid.NewGuid(),
-      demo.company,
-      demo.machineId,
+      request.company,
+      request.machineId,
       _settings.DemoLicense.nHardware,
       _settings.DemoLicense.nModule,
       _settings.DemoLicense.nOperator,
@@ -58,36 +71,66 @@ public class LicensingService(IOptions<AppConfigSetting> options, AppDbContext c
     var json = JsonSerializer.Serialize(payload);
     var data = Encoding.UTF8.GetBytes(json);
 
-    // Encrypt license with shared secret
-    var encrypt = SymmetricEncryptHelper.Encrypt(data, secrets.shared_secret);
-    // Sign license with encypt data with private key
-    var sign = _signer.SignData(encrypt, HashAlgorithmName.SHA256);
+    // Step 4 : Get Signer from database
+    var sign = await context.sign_key
+    .AsNoTracking()
+    .OrderByDescending(s => s.created_date)
+    .FirstOrDefaultAsync(s => s.is_revoked == false);
+
+    if (sign is null)
+    {
+      return new BaseDto<EncryptedLicense>(
+            System.Net.HttpStatusCode.InternalServerError,
+            null,
+            Guid.NewGuid(),
+            "No valid signing key found",
+            DateTime.UtcNow.ToLocalTime()
+      );
+    }
+
+    var serverSignPri = sign.sign_priv;
+    var serverSignPub = sign.sign_pub;
+    var signer = EncryptHelper.LoadSignerPrivateKey(serverSignPri);
+    var secrets = EncryptHelper.DeriveSecretKey(EncryptHelper.LoadDhPrivateKey(serverSignPri), authJson.appDhPub);
+
+    // Step 5 : Server sign and encrypt license
+    var key = EncryptHelper.DeriveAesKey(secrets,_settings.Secret);
+    var signature = EncryptHelper.SignData(signer, data);
+    var pay = EncryptHelper.BuildPayload(data, signature);
+    var enc = EncryptHelper.EncryptAes(key, pay);
 
     var license = new EncryptedLicense(
-      secrets.secret_uuid,
-      Convert.ToBase64String(encrypt),
-      Convert.ToBase64String(sign)
+      request.sessionId,
+      Convert.ToBase64String(enc),
+      Convert.ToBase64String(signature),
+      Convert.ToBase64String(serverSignPub)
     );
 
     var en = new Entity.License
     {
-      company = demo.company,
-      customer_site = demo.customerSite,
-      machine_id = demo.machineId,
-      secret_uuid = secrets.secret_uuid,
-      license = encrypt,
+      company = request.company,
+      customer_site = request.customerSite,
+      machine_id = request.machineId,
+      license = enc,
+      sign_key_uuid = sign.sign_key_uuid,
       license_type = Enums.LicenseType.Demo,
       created_date = DateTime.Now,
       expire_date = DateTime.Now.AddDays(_settings.DemoLicense.DurationInDays),
     };
 
-    File.WriteAllText("license.json", JsonSerializer.Serialize(license, new JsonSerializerOptions { WriteIndented = true }));
-    Console.WriteLine("License generated.");
+    // File.WriteAllText("license.json", JsonSerializer.Serialize(license, new JsonSerializerOptions { WriteIndented = true }));
+    // Console.WriteLine("License generated.");
 
     await context.license.AddAsync(en);
     await context.SaveChangesAsync();
 
 
-    return license;
+    return new BaseDto<EncryptedLicense>(
+      System.Net.HttpStatusCode.OK,
+      license,
+      Guid.NewGuid(),
+      "Demo license generation successful",
+      DateTime.UtcNow.ToLocalTime()
+    );
   }
 }

@@ -15,10 +15,8 @@ namespace LicenseService.Controllers
         [HttpPost("generate/demo")]
         public async Task<IActionResult> GenerateDemoLicenseAsync([FromBody] GenerateDemo fingerPrint)
         {
-            var payload = await service.CreateLicenseDemoAsync(fingerPrint);
-            return Ok(
-                new BaseDto(HttpStatusCode.OK, payload, Guid.NewGuid(), payload is null ? "Demo license generation failed" : "Demo license generation successful", DateTime.UtcNow)
-            );
+            var res = await service.CreateLicenseDemoAsync(fingerPrint);
+            return Ok(res);
         }
 
         [HttpPost("generate")]
