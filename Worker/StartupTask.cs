@@ -29,7 +29,6 @@ public class StartupTask : IHostedService
     using var scope = _scopeFactory.CreateScope();
 
     var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    var keyRotateService = scope.ServiceProvider.GetRequiredService<IKeyService>();
 
     var hasKey = await context.sign_key.AnyAsync(x => !x.is_revoked, cancellationToken);
 

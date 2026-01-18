@@ -28,7 +28,7 @@ public sealed class ExceptionHandlingMiddleware : IMiddleware
     context.Response.StatusCode = ex is TimeoutException ? (int)HttpStatusCode.RequestTimeout : (int)HttpStatusCode.InternalServerError;
     context.Response.ContentType = "application/json";
 
-    return context.Response.WriteAsync(JsonSerializer.Serialize(new BaseDto(
+    return context.Response.WriteAsync(JsonSerializer.Serialize(new BaseDto<List<string>>(
       HttpStatusCode.InternalServerError,
       new List<string> { ex.Message },
       Guid.NewGuid(),
